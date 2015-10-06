@@ -1,0 +1,163 @@
+#
+# A minimal two-color theme.
+#
+# Authors:
+#   Kevin Laude <nerfyoda@gmail.com>
+#
+# Features:
+#   - One line, left aligned.
+#   - The prompt is prefixed by a character sequence of your choice.
+#   - Only displays the current directory instead of the full path.
+#   - Displays the current branch when in a git project (this requires loading
+#     the git module before prompt in ~/.zpreztorc).
+#   - Displays a character at the end of the prompt when in a git project with
+#     "dirty" files.
+#
+# Usage:
+#   This prompt's prefix symbol and colors are customizable:
+#     prompt heye [<symbol>] [<color1>] [<color2>]
+#
+#   In ~/.zpreztorc:
+#     zstyle ':prezto:module:prompt' theme 'heye' \
+#       ['<symbol>'] \
+#       ['<color1>'] \
+#       ['<color2>']
+#
+#   If these options are not provided, the symbol defaults to "☁" with colors
+#   cyan and green.
+#
+# Screenshots:
+#   http://i.imgur.com/mJCZ8rE.png
+#
+# Note:
+#   This is a port of the oh-my-zsh heye theme, originally written by Phillip
+#   Ridlen <p@rdln.net> and Mark Drago <markdrago@gmail.com>
+#
+
+# Load dependencies.
+pmodload 'helper'
+
+function prompt_heye_precmd {
+  _prompt_heye_return_code=$?
+  setopt LOCAL_OPTIONS
+  unsetopt XTRACE KSH_ARRAYS
+
+  vcs_info
+  # Get Git repository information.
+  if (( $+functions[git-info] ))
+  then
+      git-info
+  fi
+}
+
+function prompt_heye_help {
+  cat <<EOT
+This prompt's prefix symbol and colors are customizable:
+
+  prompt heye [<symbol>] [<color1>] [<color2>]
+
+In ~/.zpreztorc:
+  zstyle ':prezto:module:prompt' theme 'heye' ['<symbol>'] ['<color1>'] ['<color2>']
+
+If these options are not provided, the symbol defaults to ☁ with colors cyan
+and green.
+EOT
+}
+
+function prompt_heye_preview {
+  if (( $# > 0 )); then
+    prompt_preview_theme 'heye' "$@"
+  else
+    prompt_preview_theme 'heye'
+    print
+    prompt_preview_theme 'heye' "✯"
+    print
+    prompt_preview_theme 'heye' ">" "yellow" "red"
+  fi
+}
+
+prompt_heye_return_code() {
+  local CODE=$1; shift
+  local TEXT=${1:-}
+  if (( $CODE != 0 ))
+  then
+    echo "%B%F{red}[$CODE] ~> $TEXT%f%b"
+  else
+    echo "%F{green}$TEXT%f"
+  fi
+}
+
+prompt_heye_format_date() {
+  date -d "@$1" +'%H:%M:%S'
+}
+
+prompt_heye_measure_time() {
+  echo $(date +%s).$(date +%N)
+}
+
+_prompt_heye_start_time_file=$(mktemp)
+
+prompt_heye_update_time() {
+  rm $_prompt_heye_start_time_file
+  prompt_heye_measure_time > $_prompt_heye_start_time_file
+}
+
+# Set the initial time (so if preccing <C-c> the time is displayed)
+prompt_heye_update_time
+
+prompt_heye_time_spent() {
+  local CODE=$1; shift
+  local CUR=$(prompt_heye_measure_time)
+  local START=$(cat $_prompt_heye_start_time_file)
+
+  if [ ! -z $START ]
+  then
+    local DIFF=$(($CUR - $START))
+    if (( DIFF > 3 || CODE != 0))
+    then
+      echo $(date -u -d @"$(($CUR - $START))" +'%-s.%N') | sed -r 's/([^\.]+\..{3}).*/\1/'
+    fi
+  fi
+}
+
+prompt_heye_preexec() {
+}
+
+prompt_heye_zshexit() {
+  rm $_prompt_heye_start_time_file
+}
+
+prompt_heye_zshaddhistory() {
+  prompt_heye_update_time
+}
+
+function prompt_heye_setup {
+  setopt LOCAL_OPTIONS
+  unsetopt XTRACE KSH_ARRAYS
+  prompt_opts=(cr percent subst)
+
+  if [[ $(id -u) == 0 ]]
+  then
+    prefix='#'
+  else
+    prefix='$'
+  fi
+
+  # Load required functions.
+  autoload -Uz vcs_info
+  autoload -Uz add-zsh-hook
+
+  # Add hook for calling git-info before each command.
+  add-zsh-hook preexec prompt_heye_preexec
+  add-zsh-hook precmd prompt_heye_precmd
+  add-zsh-hook zshaddhistory prompt_heye_zshaddhistory
+  add-zsh-hook zshexit prompt_heye_zshexit
+
+  # Define prompts.
+  PROMPT='$(prompt_heye_return_code $_prompt_heye_return_code $(prompt_heye_time_spent $_prompt_heye_return_code))
+%B%n%b%F{cyan}@%f%B%m%b: ${PWD/#$HOME/~}
+$prefix '
+  RPROMPT='%{$(echotc UP 1)%}[%B$(git rev-parse --abbrev-ref HEAD)%b %F{cyan}$(git rev-parse --short HEAD)%f] %B$(prompt_heye_format_date $(date +%s))%b%{$(echotc DO 1)%}'
+}
+
+prompt_heye_setup "$@"
