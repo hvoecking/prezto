@@ -157,7 +157,14 @@ function prompt_heye_setup {
   PROMPT='$(prompt_heye_return_code $_prompt_heye_return_code $(prompt_heye_time_spent $_prompt_heye_return_code))
 %B%n%b%F{cyan}@%f%B%m%b: ${PWD/#$HOME/~}
 $prefix '
-  RPROMPT='%{$(echotc UP 1)%}[%B$(git rev-parse --abbrev-ref HEAD)%b %F{cyan}$(git rev-parse --short HEAD)%f] %B$(prompt_heye_format_date $(date +%s))%b%{$(echotc DO 1)%}'
+  RPROMPT='%{$(echotc UP 1)%}$(prompt_heye_git_info) %B$(prompt_heye_format_date $(date +%s))%b%{$(echotc DO 1)%}'
+}
+
+prompt_heye_git_info() {
+  if [ -d .git ]
+  then
+    echo "[%B$(git rev-parse --abbrev-ref HEAD)%b %F{cyan}$(git rev-parse --short HEAD)%f]"
+  fi
 }
 
 prompt_heye_setup "$@"
