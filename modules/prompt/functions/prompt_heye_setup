@@ -85,6 +85,10 @@ prompt_heye_return_code() {
   else
     echo "%F{green}$TEXT%f"
   fi
+  if [ ! -z $TEXT ]
+  then
+    echo "\0"
+  fi
 }
 
 prompt_heye_format_date() {
@@ -154,8 +158,7 @@ function prompt_heye_setup {
   add-zsh-hook zshexit prompt_heye_zshexit
 
   # Define prompts.
-  PROMPT='$(prompt_heye_return_code $_prompt_heye_return_code $(prompt_heye_time_spent $_prompt_heye_return_code))
-%B%n%b%F{cyan}@%f%B%m%b: ${PWD/#$HOME/~}
+  PROMPT='$(prompt_heye_return_code $_prompt_heye_return_code $(prompt_heye_time_spent $_prompt_heye_return_code))%B%n%b%F{cyan}@%f%B%m%b: ${PWD/#$HOME/~}
 $prefix '
   RPROMPT='%{$(echotc UP 1)%}$(prompt_heye_git_info) %B$(prompt_heye_format_date $(date +%s))%b%{$(echotc DO 1)%}'
 }
